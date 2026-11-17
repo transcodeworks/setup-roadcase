@@ -15,67 +15,50 @@ its releases need on the runner.
 
 ## Quick start
 
-Each system's release is made on that system: roadcase does not cross-build. The secrets
-are yours; the action reads none of them. With none set, roadcase still packages (ad hoc
-signed on macOS, unsigned elsewhere), which is enough to try a workflow out. The
-[roadcase README](https://github.com/transcodeworks/roadcase#readme) describes
-`roadcase.toml` and every variable.
-
-### macOS
+One job, every system: each runner packages its own release, since roadcase does not
+cross-build, and `roadcase release` takes the system it runs on (roadcase 0.1.1 or later).
 
 ```yaml
 jobs:
-  macos:
-    runs-on: macos-15 # Apple silicon; macos-15-intel for Intel
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: transcodeworks/setup-roadcase@v1
-      - run: roadcase release macos
-        env:
-          # Your Developer ID Application certificate, a .p12 in base64.
-          CODESIGN_CERTIFICATE: ${{ secrets.CODESIGN_CERTIFICATE }}
-          CODESIGN_CERTIFICATE_PASSWORD: ${{ secrets.CODESIGN_CERTIFICATE_PASSWORD }}
-          # The Apple ID that notarizes, and its app-specific password.
-          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
-          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
-          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
-          # The key that signs the update feed (`roadcase keygen`).
-          ROADCASE_UPDATE_SECRET_KEY: ${{ secrets.ROADCASE_UPDATE_SECRET_KEY }}
-```
-
-### Windows
-
-```yaml
-jobs:
-  windows:
-    runs-on: windows-2025
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: transcodeworks/setup-roadcase@v1
-      - run: roadcase release windows
-        env:
-          ROADCASE_UPDATE_SECRET_KEY: ${{ secrets.ROADCASE_UPDATE_SECRET_KEY }}
-          # And whatever the command in your [windows.sign] table reads.
-```
-
-### Linux
-
-```yaml
-jobs:
-  linux:
+  release:
     strategy:
+      fail-fast: false
       matrix:
-        runner: [ubuntu-24.04, ubuntu-24.04-arm] # x86_64 and aarch64
+        runner:
+          - macos-15         # Apple silicon
+          - macos-15-intel   # Intel
+          - windows-2025
+          - ubuntu-24.04     # x86_64
+          - ubuntu-24.04-arm # aarch64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: transcodeworks/setup-roadcase@v1
-      - run: roadcase release linux --format appimage --format deb
+      - run: roadcase release
         env:
+          # The key that signs the update feed (`roadcase keygen`).
           ROADCASE_UPDATE_SECRET_KEY: ${{ secrets.ROADCASE_UPDATE_SECRET_KEY }}
+          # macOS: your Developer ID Application certificate, a .p12 in base64,
+          # and the Apple ID that notarizes, with its app-specific password.
+          CODESIGN_CERTIFICATE: ${{ secrets.CODESIGN_CERTIFICATE }}
+          CODESIGN_CERTIFICATE_PASSWORD: ${{ secrets.CODESIGN_CERTIFICATE_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          # Windows: whatever the command in your [windows.sign] table reads.
+```
+
+The secrets are yours; the action reads none of them, and each system uses only its own.
+With none set, roadcase still packages (ad hoc signed on macOS, unsigned elsewhere), which
+is enough to try a workflow out. The
+[roadcase README](https://github.com/transcodeworks/roadcase#readme) describes
+`roadcase.toml` and every variable.
+
+A system can still be named, and Linux can be limited to some formats:
+
+```yaml
+      - run: roadcase release linux --format appimage --format deb
 ```
 
 ## Inputs

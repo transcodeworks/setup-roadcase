@@ -103,7 +103,7 @@ jobs:
       - name: An AppImage is made with them, and runs
         if: matrix.system == 'linux'
         run: |
-          image=$(roadcase release linux --format appimage --skip-build \
+          image=$(roadcase release --format appimage --skip-build \
             --config test/fixture/roadcase.toml --out "$RUNNER_TEMP/fixture")
           [ "$(basename "$image")" = "Fixture-1.0.0-$(uname -m).AppImage" ]
           [ "$("$image")" = "hello from the fixture" ]
